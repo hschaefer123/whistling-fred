@@ -11,7 +11,7 @@ beat in perfect sync with the music.
 ![No build step](https://img.shields.io/badge/build-none-3ad6ff)
 ![Runs offline](https://img.shields.io/badge/offline-yes-ffd24a)
 
----
+--- 
 
 ## What it does
 
