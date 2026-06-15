@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>♪ Whistling Fred — Amiga MOD Player ♪</title>
+<style>
+  :root{
+    --bg:#1a0b2e; --bg2:#2d1b4e; --neon:#ff8c1a; --neon2:#ffd24a;
+    --cyan:#3ad6ff; --pink:#ff4d8a; --ink:#120625;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:"Courier New",monospace;
+    background:radial-gradient(circle at 50% 0%,#3a1d6e 0%,var(--bg) 55%,#0d0418 100%);
+    color:#ffe9c7; overflow-x:hidden; min-height:100%;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  /* CRT scanlines */
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:50;
+    background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.18) 3px,rgba(0,0,0,0) 4px);
+    mix-blend-mode:multiply;
+  }
+  h1{
+    font-size:clamp(22px,5vw,40px); margin:18px 0 2px; letter-spacing:2px;
+    color:var(--neon2);
+    text-shadow:0 0 6px var(--neon),0 0 18px var(--neon),3px 3px 0 #7a2d00;
+    text-align:center;
+  }
+  .sub{color:var(--cyan); font-size:13px; letter-spacing:3px; margin-bottom:6px; text-transform:uppercase;}
+
+  .stage{
+    position:relative; width:min(92vw,560px); aspect-ratio:1/0.92;
+    margin:6px auto 4px; display:flex; align-items:flex-end; justify-content:center;
+  }
+  .ground{
+    position:absolute; bottom:8%; left:5%; right:5%; height:24px;
+    background:linear-gradient(var(--neon),#7a2d00);
+    border-radius:50%; filter:blur(4px); opacity:.55;
+  }
+  #fred{ width:78%; height:auto; overflow:visible; transform-origin:50% 100%; }
+
+  .notes{position:absolute; inset:0; pointer-events:none; overflow:visible;}
+  .intro-badge{
+    position:absolute; top:6%; left:50%; transform:translateX(-50%);
+    background:rgba(58,214,255,.16); border:1px solid var(--cyan); color:var(--cyan);
+    font-size:12px; letter-spacing:2px; padding:5px 12px; border-radius:20px;
+    white-space:nowrap; opacity:0; transition:opacity .3s; pointer-events:none; z-index:5;
+    animation:introPulse 1.4s ease-in-out infinite;
+  }
+  .intro-badge.show{opacity:1;}
+  @keyframes introPulse{0%,100%{transform:translateX(-50%) scale(1);}50%{transform:translateX(-50%) scale(1.06);}}
+  .note{
+    position:absolute; font-size:26px; will-change:transform,opacity;
+    text-shadow:0 0 8px currentColor; animation:floatNote 1.5s ease-out forwards;
+  }
+  @keyframes floatNote{
+    0%{transform:translate(0,0) scale(.4) rotate(0); opacity:0;}
+    15%{opacity:1; transform:translate(0,-10px) scale(1) rotate(-8deg);}
+    100%{transform:translate(var(--dx),-150px) scale(1.1) rotate(var(--rot)); opacity:0;}
+  }
+
+  .panel{
+    width:min(92vw,560px); background:linear-gradient(#2d1b4e,#1d1136);
+    border:2px solid var(--neon); border-radius:14px; padding:14px 16px 16px;
+    box-shadow:0 0 22px rgba(255,140,26,.35),inset 0 0 18px rgba(0,0,0,.5);
+    margin-bottom:18px;
+  }
+  .row{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  button{
+    font-family:inherit; font-weight:bold; font-size:16px; letter-spacing:1px;
+    color:var(--ink); background:linear-gradient(var(--neon2),var(--neon));
+    border:none; border-radius:10px; padding:12px 22px; cursor:pointer;
+    box-shadow:0 4px 0 #7a2d00,0 0 14px rgba(255,140,26,.5); transition:.08s;
+  }
+  button:active{transform:translateY(3px); box-shadow:0 1px 0 #7a2d00;}
+  button:disabled{opacity:.5; cursor:default;}
+  .meta{flex:1; min-width:160px; font-size:12px; line-height:1.5; color:#cdb6ff;}
+  .meta b{color:var(--neon2);}
+
+  /* channel VU meters */
+  .vu{display:flex; gap:6px; align-items:flex-end; height:46px; margin-top:14px;}
+  .bar{
+    flex:1; background:#160a2b; border:1px solid #4a3170; border-radius:4px;
+    position:relative; height:100%; overflow:hidden;
+  }
+  .bar i{
+    position:absolute; left:0; right:0; bottom:0; height:0%;
+    background:linear-gradient(var(--cyan),#1e6fd6); transition:height .05s linear;
+  }
+  .bar.lead i{background:linear-gradient(var(--neon2),var(--neon));}
+  .bar span{position:absolute; top:2px; left:0; right:0; text-align:center; font-size:9px; color:#7e63b5; z-index:2;}
+
+  /* scrolling message from the MOD's sample names */
+  .ticker{
+    margin-top:12px; overflow:hidden; white-space:nowrap; border-top:1px dashed #4a3170;
+    border-bottom:1px dashed #4a3170; padding:6px 0;
+  }
+  .ticker span{display:inline-block; padding-left:100%; animation:scroll 26s linear infinite;
+    color:var(--cyan); font-size:13px; letter-spacing:2px;}
+  @keyframes scroll{to{transform:translateX(-100%);}}
+
+  .hint{font-size:11px; color:#8c74bf; margin-top:10px; text-align:center;}
+  a{color:var(--neon2);}
+</style>
+</head>
+<body>
+  <h1>WHISTLING&nbsp;FRED</h1>
+  <div class="sub" id="byline">an amiga protracker tune · 1992</div>
+
+  <div class="stage">
+    <div class="ground"></div>
+    <div class="intro-badge" id="introBadge">♫ intro… Fred is about to whistle ♫</div>
+    <div class="notes" id="notes"></div>
+    <!-- Fred the whistler -->
+    <svg id="fred" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="face" cx="40%" cy="35%" r="75%">
+          <stop offset="0%" stop-color="#ffe08a"/><stop offset="70%" stop-color="#ffc23b"/>
+          <stop offset="100%" stop-color="#e89200"/>
+        </radialGradient>
+        <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ff5fa0"/><stop offset="100%" stop-color="#c61f63"/>
+        </linearGradient>
+      </defs>
+
+      <g id="body">
+        <!-- shoulders/shirt -->
+        <path d="M70 320 Q70 250 150 250 Q230 250 230 320 Z" fill="#3ad6ff"/>
+        <path d="M150 250 L150 320" stroke="#1e9fd6" stroke-width="3"/>
+        <!-- collar -->
+        <path d="M120 258 L150 280 L180 258" fill="none" stroke="#1e9fd6" stroke-width="4" stroke-linecap="round"/>
+
+        <!-- bongo drums + drumming arms -->
+        <g id="bongos">
+          <!-- left bongo (KICK) -->
+          <path d="M86 356 L96 398 Q120 410 144 398 L154 356 Z" fill="#9a5f2a" stroke="#5a3712" stroke-width="2.5"/>
+          <ellipse cx="120" cy="356" rx="34" ry="13" fill="#caa066" stroke="#5a3712" stroke-width="2.5"/>
+          <ellipse cx="120" cy="356" rx="27" ry="9.5" fill="#f3dcb6"/>
+          <!-- right bongo (SNARE) -->
+          <path d="M160 360 L168 396 Q186 406 204 396 L212 360 Z" fill="#9a5f2a" stroke="#5a3712" stroke-width="2.5"/>
+          <ellipse cx="186" cy="360" rx="28" ry="11" fill="#caa066" stroke="#5a3712" stroke-width="2.5"/>
+          <ellipse cx="186" cy="360" rx="21" ry="7.5" fill="#f3dcb6"/>
+        </g>
+
+        <!-- arms pivot at the shoulders; JS rotates them to strike -->
+        <g id="armL">
+          <path d="M104 262 Q92 308 110 344" fill="none" stroke="#3ad6ff" stroke-width="19" stroke-linecap="round"/>
+          <path d="M104 262 Q92 308 110 344" fill="none" stroke="#1e9fd6" stroke-width="19" stroke-linecap="round" opacity="0.25"/>
+          <ellipse cx="116" cy="348" rx="15" ry="11" fill="url(#face)" stroke="#b06f00" stroke-width="2"/>
+          <path d="M105 350 q11 7 23 0" stroke="#b06f00" stroke-width="1.6" fill="none"/>
+        </g>
+        <g id="armR">
+          <path d="M196 262 Q208 308 190 346" fill="none" stroke="#3ad6ff" stroke-width="19" stroke-linecap="round"/>
+          <path d="M196 262 Q208 308 190 346" fill="none" stroke="#1e9fd6" stroke-width="19" stroke-linecap="round" opacity="0.25"/>
+          <ellipse cx="184" cy="350" rx="15" ry="11" fill="url(#face)" stroke="#b06f00" stroke-width="2"/>
+          <path d="M173 352 q11 7 23 0" stroke="#b06f00" stroke-width="1.6" fill="none"/>
+        </g>
+
+        <g id="head">
+          <!-- ears -->
+          <ellipse cx="60" cy="150" rx="14" ry="20" fill="url(#face)" stroke="#b06f00" stroke-width="2"/>
+          <ellipse cx="240" cy="150" rx="14" ry="20" fill="url(#face)" stroke="#b06f00" stroke-width="2"/>
+          <!-- face -->
+          <ellipse cx="150" cy="148" rx="92" ry="98" fill="url(#face)" stroke="#b06f00" stroke-width="3"/>
+          <!-- cap -->
+          <path d="M58 108 Q150 8 244 108 Q150 78 58 108 Z" fill="url(#cap)" stroke="#8c1546" stroke-width="3"/>
+          <ellipse cx="150" cy="60" rx="10" ry="10" fill="#ffd24a"/>
+          <path d="M58 110 Q40 116 32 132 Q90 120 120 116 Q88 110 58 110Z" fill="url(#cap)" stroke="#8c1546" stroke-width="2"/>
+
+          <!-- eyebrows -->
+          <g id="brows">
+            <path id="browL" d="M96 112 Q116 100 134 110" fill="none" stroke="#5a3a00" stroke-width="6" stroke-linecap="round"/>
+            <path id="browR" d="M166 110 Q184 100 204 112" fill="none" stroke="#5a3a00" stroke-width="6" stroke-linecap="round"/>
+          </g>
+          <!-- eyes -->
+          <g id="eyes">
+            <ellipse cx="116" cy="132" rx="17" ry="19" fill="#fff" stroke="#7a5200" stroke-width="2"/>
+            <ellipse cx="184" cy="132" rx="17" ry="19" fill="#fff" stroke="#7a5200" stroke-width="2"/>
+            <circle id="pupL" cx="120" cy="135" r="7" fill="#241600"/>
+            <circle id="pupR" cx="188" cy="135" r="7" fill="#241600"/>
+            <circle cx="123" cy="132" r="2.4" fill="#fff"/>
+            <circle cx="191" cy="132" r="2.4" fill="#fff"/>
+          </g>
+          <!-- eyelids for blinking -->
+          <g id="lids">
+            <rect id="lidL" x="98" y="113" width="36" height="0" rx="6" fill="url(#face)"/>
+            <rect id="lidR" x="166" y="113" width="36" height="0" rx="6" fill="url(#face)"/>
+          </g>
+
+          <!-- cheeks (puff during whistle) -->
+          <ellipse id="cheekL" cx="104" cy="176" rx="20" ry="15" fill="#ff9d6b" opacity="0.55"/>
+          <ellipse id="cheekR" cx="196" cy="176" rx="20" ry="15" fill="#ff9d6b" opacity="0.55"/>
+
+          <!-- nose -->
+          <path d="M150 140 Q160 160 150 170 Q142 168 144 160" fill="#e89200" stroke="#b06f00" stroke-width="1.5"/>
+
+          <!-- whistling mouth -->
+          <g id="mouthGroup">
+            <ellipse id="mouth" cx="150" cy="196" rx="9" ry="9" fill="#5a1a00"/>
+            <ellipse id="mouthInner" cx="150" cy="197" rx="4" ry="4" fill="#2a0c00"/>
+            <!-- little air stream -->
+            <path id="air" d="M159 194 q14 -2 22 -8" fill="none" stroke="var(--cyan)" stroke-width="3"
+                  stroke-linecap="round" opacity="0"/>
+          </g>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <button id="play">▶ PLAY</button>
+      <div class="meta">
+        <div><b>Title:</b> <span id="title">whistling fred</span></div>
+        <div><b>Format:</b> ProTracker 4-CH (M.K.) · 31 samples</div>
+        <div><b>Sync:</b> lips follow the <b>whistle</b>; hands drum the <b>kick</b> &amp; <b>snare</b></div>
+      </div>
+    </div>
+
+    <div class="vu" id="vu">
+      <div class="bar"><span>DRUMS</span><i></i></div>
+      <div class="bar lead"><span>WHISTLE</span><i></i></div>
+      <div class="bar"><span>ARPEGGIO</span><i></i></div>
+      <div class="bar"><span>BASS</span><i></i></div>
+    </div>
+
+    <div class="ticker"><span id="msg">★ whistling fred ★</span></div>
+    <div class="hint">Works offline — just open this file in your browser. Click PLAY (audio starts only after a click).</div>
+  </div>
+
+  <script src="mod-data.js"></script>
+  <script src="protracker.js"></script>
+  <script src="whistler.js"></script>
+</body>
+</html>
